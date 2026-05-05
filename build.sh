@@ -13,10 +13,11 @@ rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR/ios"
 mkdir -p "$OUTPUT_DIR/simulator"
 
-COMMON_FLAGS="-x objective-c++ -std=c++20 -O2 -fvisibility=hidden -fobjc-arc -fmodules"
+COMMON_FLAGS="-std=c++20 -O2 -fvisibility=hidden -fmodules"
+OBJC_FLAGS="-x objective-c++ -fobjc-arc"
 
 echo "=== Building for iOS (arm64) ==="
-clang++ $COMMON_FLAGS \
+clang++ $OBJC_FLAGS $COMMON_FLAGS \
     -target arm64-apple-ios14.0 \
     -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
     -framework UIKit \
@@ -32,7 +33,7 @@ file "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
 
 echo ""
 echo "=== Building for iOS Simulator (arm64) ==="
-clang++ $COMMON_FLAGS \
+clang++ $OBJC_FLAGS $COMMON_FLAGS \
     -target arm64-apple-ios14.0-simulator \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
     -framework UIKit \
@@ -48,7 +49,7 @@ file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
 
 echo ""
 echo "=== Building for iOS Simulator (x86_64) ==="
-clang++ $COMMON_FLAGS \
+clang++ $OBJC_FLAGS $COMMON_FLAGS \
     -target x86_64-apple-ios14.0-simulator \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
     -framework UIKit \
