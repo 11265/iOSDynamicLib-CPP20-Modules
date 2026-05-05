@@ -1,5 +1,6 @@
 #import "FloatingWindow.hpp"
 #import <UIKit/UIKit.h>
+#import <cmath>
 
 @interface FloatingButton : UIButton
 @property (nonatomic, assign) CGPoint lastTouchPoint;
