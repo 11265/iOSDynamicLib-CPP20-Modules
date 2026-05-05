@@ -13,16 +13,18 @@ rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR/ios"
 mkdir -p "$OUTPUT_DIR/simulator"
 
-COMMON_FLAGS="-std=c++20 -O2 -fvisibility=hidden"
+COMMON_FLAGS="-std=c++20 -O2 -fvisibility=hidden -fobjc-arc"
 
 echo "=== Building for iOS (arm64) ==="
 clang++ $COMMON_FLAGS \
     -target arm64-apple-ios14.0 \
     -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
+    -framework UIKit \
+    -framework Foundation \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib" \
-    modules/Library.cpp
+    modules/FloatingWindow.mm
 
 echo "Created: $OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
 file "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
@@ -32,10 +34,12 @@ echo "=== Building for iOS Simulator (arm64) ==="
 clang++ $COMMON_FLAGS \
     -target arm64-apple-ios14.0-simulator \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
+    -framework UIKit \
+    -framework Foundation \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib" \
-    modules/Library.cpp
+    modules/FloatingWindow.mm
 
 echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
 file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
@@ -45,10 +49,12 @@ echo "=== Building for iOS Simulator (x86_64) ==="
 clang++ $COMMON_FLAGS \
     -target x86_64-apple-ios14.0-simulator \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
+    -framework UIKit \
+    -framework Foundation \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib" \
-    modules/Library.cpp
+    modules/FloatingWindow.mm
 
 echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib"
 file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib"
