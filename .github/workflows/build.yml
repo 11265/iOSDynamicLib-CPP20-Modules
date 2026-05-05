@@ -1,0 +1,160 @@
+name: Build iOS Dynamic Library (C++20 Modules)
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Build configuration'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
+
+env:
+  LIBRARY_NAME: iOSDynamicLib
+  LIBRARY_VERSION: 1.0.0
+
+jobs:
+  build-ios:
+    name: Build iOS Framework with C++20 Modules
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Show versions
+        run: |
+          xcodebuild -version
+          clang --version
+          cmake --version
+
+      - name: Create build directories
+        run: |
+          mkdir -p build/ios
+          mkdir -p build/ios-simulator-x86
+          mkdir -p build/ios-simulator-arm64
+          mkdir -p output
+
+      - name: Build for iOS (arm64)
+        run: |
+          cmake -B build/ios \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_BUILD_TYPE=${{ github.event.inputs.configuration || 'Release' }} \
+            -DCMAKE_CXX_SCAN_FOR_MODULES=ON \
+            -GXcode
+          
+          cmake --build build/ios --config ${{ github.event.inputs.configuration || 'Release' }} -j$(sysctl -n hw.ncpu)
+
+      - name: Build for iOS Simulator (x86_64)
+        run: |
+          cmake -B build/ios-simulator-x86 \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DCMAKE_BUILD_TYPE=${{ github.event.inputs.configuration || 'Release' }} \
+            -DCMAKE_CXX_SCAN_FOR_MODULES=ON \
+            -GXcode
+          
+          cmake --build build/ios-simulator-x86 --config ${{ github.event.inputs.configuration || 'Release' }} -j$(sysctl -n hw.ncpu)
+
+      - name: Build for iOS Simulator (arm64)
+        run: |
+          cmake -B build/ios-simulator-arm64 \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_BUILD_TYPE=${{ github.event.inputs.configuration || 'Release' }} \
+            -DCMAKE_CXX_SCAN_FOR_MODULES=ON \
+            -GXcode
+          
+          cmake --build build/ios-simulator-arm64 --config ${{ github.event.inputs.configuration || 'Release' }} -j$(sysctl -n hw.ncpu)
+
+      - name: Create XCFramework
+        run: |
+          echo "Creating fat binary for simulator..."
+          
+          # Create output directory
+          mkdir -p output/ios-simulator
+          
+          # Create fat binary for simulator
+          lipo -create \
+            "build/ios-simulator-x86/${{ env.LIBRARY_NAME }}.framework/${{ env.LIBRARY_NAME }}" \
+            "build/ios-simulator-arm64/${{ env.LIBRARY_NAME }}.framework/${{ env.LIBRARY_NAME }}" \
+            -output "output/ios-simulator/${{ env.LIBRARY_NAME }}"
+          
+          # Copy framework structure
+          cp -R "build/ios-simulator-x86/${{ env.LIBRARY_NAME }}.framework" "output/ios-simulator/"
+          cp "output/ios-simulator/${{ env.LIBRARY_NAME }}" "output/ios-simulator/${{ env.LIBRARY_NAME }}.framework/${{ env.LIBRARY_NAME }}"
+          
+          echo "Creating XCFramework..."
+          
+          # Create XCFramework
+          xcodebuild -create-xcframework \
+            -framework "build/ios/${{ env.LIBRARY_NAME }}.framework" \
+            -framework "output/ios-simulator/${{ env.LIBRARY_NAME }}.framework" \
+            -output "output/${{ env.LIBRARY_NAME }}.xcframework"
+
+      - name: Verify XCFramework
+        run: |
+          echo "XCFramework contents:"
+          ls -la output/
+          echo ""
+          echo "Framework architectures:"
+          xcodebuild -showBuildSettings -project output/${{ env.LIBRARY_NAME }}.xcframework 2>/dev/null || true
+          echo ""
+          echo "Binary info:"
+          file output/${{ env.LIBRARY_NAME }}.xcframework/*/iOSDynamicLib
+
+      - name: Create ZIP archive
+        run: |
+          cd output
+          zip -r ${{ env.LIBRARY_NAME }}-${{ env.LIBRARY_VERSION }}-cpp20-modules.xcframework.zip ${{ env.LIBRARY_NAME }}.xcframework
+
+      - name: Upload XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.LIBRARY_NAME }}-xcframework-cpp20
+          path: output/${{ env.LIBRARY_NAME }}.xcframework
+          retention-days: 30
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.LIBRARY_NAME }}-xcframework-zip
+          path: output/${{ env.LIBRARY_NAME }}-${{ env.LIBRARY_VERSION }}-cpp20-modules.xcframework.zip
+          retention-days: 90
+
+  release:
+    name: Create Release
+    needs: build-ios
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: iOSDynamicLib-xcframework-zip
+          path: ./artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./artifacts/*.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
