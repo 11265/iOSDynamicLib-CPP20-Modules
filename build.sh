@@ -24,7 +24,8 @@ clang++ $COMMON_FLAGS \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib" \
-    modules/FloatingWindow.mm
+    modules/FloatingWindow.mm \
+    modules/Library.cpp
 
 echo "Created: $OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
 file "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
@@ -39,7 +40,8 @@ clang++ $COMMON_FLAGS \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib" \
-    modules/FloatingWindow.mm
+    modules/FloatingWindow.mm \
+    modules/Library.cpp
 
 echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
 file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
@@ -54,7 +56,8 @@ clang++ $COMMON_FLAGS \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib" \
-    modules/FloatingWindow.mm
+    modules/FloatingWindow.mm \
+    modules/Library.cpp
 
 echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib"
 file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib"
