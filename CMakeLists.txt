@@ -13,21 +13,17 @@ add_library(iOSDynamicLib SHARED)
 target_sources(iOSDynamicLib PUBLIC
     FILE_SET CXX_MODULES FILES
         modules/Math.ixx
-        modules/Math.cppm
         modules/Utils.ixx
-        modules/Utils.cppm
         modules/Core.ixx
-        modules/Core.cppm
+)
+
+target_compile_options(iOSDynamicLib PRIVATE
+    -Wno-error
 )
 
 target_compile_features(iOSDynamicLib PUBLIC cxx_std_20)
 
 set_target_properties(iOSDynamicLib PROPERTIES
-    FRAMEWORK TRUE
-    FRAMEWORK_VERSION A
-    MACOSX_FRAMEWORK_IDENTIFIER "com.iosdynamiclib.iOSDynamicLib"
-    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
-    MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
     OUTPUT_NAME "iOSDynamicLib"
 )
 
@@ -38,5 +34,6 @@ if(IOS)
 endif()
 
 install(TARGETS iOSDynamicLib
-    FRAMEWORK DESTINATION .
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
 )

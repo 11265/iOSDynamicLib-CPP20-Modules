@@ -34,18 +34,15 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Install Ninja
+        run: brew install ninja
+
       - name: Show versions
         run: |
           xcodebuild -version
           clang --version
           cmake --version
-
-      - name: Create build directories
-        run: |
-          mkdir -p build/ios
-          mkdir -p build/ios-simulator-x86
-          mkdir -p build/ios-simulator-arm64
-          mkdir -p output
+          ninja --version
 
       - name: Build for iOS (arm64)
         run: |
@@ -55,9 +52,10 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_BUILD_TYPE=${{ github.event.inputs.configuration || 'Release' }} \
             -DCMAKE_CXX_SCAN_FOR_MODULES=ON \
-            -GXcode
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -GNinja
           
-          cmake --build build/ios --config ${{ github.event.inputs.configuration || 'Release' }} -j$(sysctl -n hw.ncpu)
+          cmake --build build/ios -j$(sysctl -n hw.ncpu)
 
       - name: Build for iOS Simulator (x86_64)
         run: |
@@ -67,9 +65,10 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=x86_64 \
             -DCMAKE_BUILD_TYPE=${{ github.event.inputs.configuration || 'Release' }} \
             -DCMAKE_CXX_SCAN_FOR_MODULES=ON \
-            -GXcode
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -GNinja
           
-          cmake --build build/ios-simulator-x86 --config ${{ github.event.inputs.configuration || 'Release' }} -j$(sysctl -n hw.ncpu)
+          cmake --build build/ios-simulator-x86 -j$(sysctl -n hw.ncpu)
 
       - name: Build for iOS Simulator (arm64)
         run: |
@@ -79,45 +78,46 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_BUILD_TYPE=${{ github.event.inputs.configuration || 'Release' }} \
             -DCMAKE_CXX_SCAN_FOR_MODULES=ON \
-            -GXcode
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -GNinja
           
-          cmake --build build/ios-simulator-arm64 --config ${{ github.event.inputs.configuration || 'Release' }} -j$(sysctl -n hw.ncpu)
+          cmake --build build/ios-simulator-arm64 -j$(sysctl -n hw.ncpu)
 
       - name: Create XCFramework
         run: |
-          echo "Creating fat binary for simulator..."
-          
-          # Create output directory
-          mkdir -p output/ios-simulator
-          
-          # Create fat binary for simulator
-          lipo -create \
-            "build/ios-simulator-x86/${{ env.LIBRARY_NAME }}.framework/${{ env.LIBRARY_NAME }}" \
-            "build/ios-simulator-arm64/${{ env.LIBRARY_NAME }}.framework/${{ env.LIBRARY_NAME }}" \
-            -output "output/ios-simulator/${{ env.LIBRARY_NAME }}"
-          
-          # Copy framework structure
-          cp -R "build/ios-simulator-x86/${{ env.LIBRARY_NAME }}.framework" "output/ios-simulator/"
-          cp "output/ios-simulator/${{ env.LIBRARY_NAME }}" "output/ios-simulator/${{ env.LIBRARY_NAME }}.framework/${{ env.LIBRARY_NAME }}"
+          mkdir -p output
           
           echo "Creating XCFramework..."
           
-          # Create XCFramework
           xcodebuild -create-xcframework \
-            -framework "build/ios/${{ env.LIBRARY_NAME }}.framework" \
-            -framework "output/ios-simulator/${{ env.LIBRARY_NAME }}.framework" \
-            -output "output/${{ env.LIBRARY_NAME }}.xcframework"
+            -library "build/ios/lib${{ env.LIBRARY_NAME }}.a" \
+            -library "build/ios-simulator-x86/lib${{ env.LIBRARY_NAME }}.a" \
+            -library "build/ios-simulator-arm64/lib${{ env.LIBRARY_NAME }}.a" \
+            -output "output/${{ env.LIBRARY_NAME }}.xcframework" || true
+          
+          if [ ! -d "output/${{ env.LIBRARY_NAME }}.xcframework" ]; then
+            echo "Creating fat binary for simulator..."
+            mkdir -p output/ios-simulator
+            
+            lipo -create \
+              "build/ios-simulator-x86/lib${{ env.LIBRARY_NAME }}.a" \
+              "build/ios-simulator-arm64/lib${{ env.LIBRARY_NAME }}.a" \
+              -output "output/ios-simulator/lib${{ env.LIBRARY_NAME }}.a"
+            
+            xcodebuild -create-xcframework \
+              -library "build/ios/lib${{ env.LIBRARY_NAME }}.a" \
+              -library "output/ios-simulator/lib${{ env.LIBRARY_NAME }}.a" \
+              -output "output/${{ env.LIBRARY_NAME }}.xcframework"
+          fi
 
       - name: Verify XCFramework
         run: |
           echo "XCFramework contents:"
           ls -la output/
           echo ""
-          echo "Framework architectures:"
-          xcodebuild -showBuildSettings -project output/${{ env.LIBRARY_NAME }}.xcframework 2>/dev/null || true
-          echo ""
           echo "Binary info:"
-          file output/${{ env.LIBRARY_NAME }}.xcframework/*/iOSDynamicLib
+          find output -name "*.a" -exec file {} \; || true
+          find output -name "*.dylib" -exec file {} \; || true
 
       - name: Create ZIP archive
         run: |
