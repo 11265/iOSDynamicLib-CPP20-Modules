@@ -5,7 +5,7 @@ LIBRARY_NAME="iOSDynamicLib"
 CONFIGURATION="${1:-Release}"
 OUTPUT_DIR="build"
 
-echo "=== Building $LIBRARY_NAME with Xcode/Clang ==="
+echo "=== Building $LIBRARY_NAME Dynamic Library with Xcode/Clang ==="
 echo "Configuration: $CONFIGURATION"
 echo ""
 
@@ -19,45 +19,56 @@ echo "=== Building for iOS (arm64) ==="
 clang++ $COMMON_FLAGS \
     -target arm64-apple-ios14.0 \
     -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
-    -c modules/Library.cpp -o "$OUTPUT_DIR/ios/Library.o"
+    -dynamiclib \
+    -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
+    -o "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib" \
+    modules/Library.cpp
 
-ar rcs "$OUTPUT_DIR/ios/lib${LIBRARY_NAME}.a" "$OUTPUT_DIR/ios/"*.o
-echo "Created: $OUTPUT_DIR/ios/lib${LIBRARY_NAME}.a"
+echo "Created: $OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
+file "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib"
 
 echo ""
 echo "=== Building for iOS Simulator (arm64) ==="
 clang++ $COMMON_FLAGS \
     -target arm64-apple-ios14.0-simulator \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
-    -c modules/Library.cpp -o "$OUTPUT_DIR/simulator/Library_arm64.o"
+    -dynamiclib \
+    -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
+    -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib" \
+    modules/Library.cpp
 
-ar rcs "$OUTPUT_DIR/simulator/lib${LIBRARY_NAME}_arm64.a" "$OUTPUT_DIR/simulator/"*_arm64.o
-echo "Created: $OUTPUT_DIR/simulator/lib${LIBRARY_NAME}_arm64.a"
+echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
+file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib"
 
 echo ""
 echo "=== Building for iOS Simulator (x86_64) ==="
 clang++ $COMMON_FLAGS \
     -target x86_64-apple-ios14.0-simulator \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
-    -c modules/Library.cpp -o "$OUTPUT_DIR/simulator/Library_x64.o"
+    -dynamiclib \
+    -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
+    -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib" \
+    modules/Library.cpp
 
-ar rcs "$OUTPUT_DIR/simulator/lib${LIBRARY_NAME}_x64.a" "$OUTPUT_DIR/simulator/"*_x64.o
-echo "Created: $OUTPUT_DIR/simulator/lib${LIBRARY_NAME}_x64.a"
+echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib"
+file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib"
 
 echo ""
 echo "=== Creating Fat Binary for Simulator ==="
 lipo -create \
-    "$OUTPUT_DIR/simulator/lib${LIBRARY_NAME}_arm64.a" \
-    "$OUTPUT_DIR/simulator/lib${LIBRARY_NAME}_x64.a" \
-    -output "$OUTPUT_DIR/simulator/lib${LIBRARY_NAME}.a"
-echo "Created: $OUTPUT_DIR/simulator/lib${LIBRARY_NAME}.a"
+    "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib" \
+    "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib" \
+    -output "$OUTPUT_DIR/simulator/${LIBRARY_NAME}.dylib"
+
+echo "Created: $OUTPUT_DIR/simulator/${LIBRARY_NAME}.dylib"
+file "$OUTPUT_DIR/simulator/${LIBRARY_NAME}.dylib"
 
 echo ""
 echo "=== Creating XCFramework ==="
 xcodebuild -create-xcframework \
-    -library "$OUTPUT_DIR/ios/lib${LIBRARY_NAME}.a" \
+    -library "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib" \
     -headers modules \
-    -library "$OUTPUT_DIR/simulator/lib${LIBRARY_NAME}.a" \
+    -library "$OUTPUT_DIR/simulator/${LIBRARY_NAME}.dylib" \
     -headers modules \
     -output "$OUTPUT_DIR/${LIBRARY_NAME}.xcframework"
 
@@ -66,3 +77,6 @@ echo "=== Build Complete ==="
 echo "XCFramework: $OUTPUT_DIR/${LIBRARY_NAME}.xcframework"
 echo ""
 ls -la "$OUTPUT_DIR/${LIBRARY_NAME}.xcframework"
+echo ""
+echo "=== Binary Info ==="
+find "$OUTPUT_DIR/${LIBRARY_NAME}.xcframework" -name "*.dylib" -exec file {} \;
