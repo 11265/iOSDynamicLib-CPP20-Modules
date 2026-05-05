@@ -8,12 +8,6 @@ set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
 
-find_package(Compiler REQUIRED)
-
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    message(WARNING "C++20 Modules are best supported with AppleClang (Xcode)")
-endif()
-
 add_library(iOSDynamicLib SHARED)
 
 target_sources(iOSDynamicLib PUBLIC
