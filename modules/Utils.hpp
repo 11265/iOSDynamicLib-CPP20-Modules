@@ -1,37 +1,37 @@
-export module Utils;
+#pragma once
 
-import <string>;
-import <vector>;
-import <algorithm>;
-import <cctype>;
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cctype>
 
-export namespace iOSDynamicLib {
+namespace iOSDynamicLib {
 namespace Utils {
 
 class UtilsModule {
 public:
-    static auto ToUpper(const std::string& str) -> std::string {
+    static std::string ToUpper(const std::string& str) {
         std::string result = str;
         std::transform(result.begin(), result.end(), result.begin(), 
             [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
         return result;
     }
     
-    static auto ToLower(const std::string& str) -> std::string {
+    static std::string ToLower(const std::string& str) {
         std::string result = str;
         std::transform(result.begin(), result.end(), result.begin(), 
             [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return result;
     }
     
-    static auto Trim(const std::string& str) -> std::string {
+    static std::string Trim(const std::string& str) {
         auto start = str.find_first_not_of(" \t\n\r");
         if (start == std::string::npos) return "";
         auto end = str.find_last_not_of(" \t\n\r");
         return str.substr(start, end - start + 1);
     }
     
-    static auto Split(const std::string& str, char delimiter) -> std::vector<std::string> {
+    static std::vector<std::string> Split(const std::string& str, char delimiter) {
         std::vector<std::string> result;
         std::string token;
         for (char c : str) {
@@ -48,7 +48,7 @@ public:
         return result;
     }
     
-    static auto Join(const std::vector<std::string>& parts, const std::string& delimiter) -> std::string {
+    static std::string Join(const std::vector<std::string>& parts, const std::string& delimiter) {
         std::string result;
         for (size_t i = 0; i < parts.size(); ++i) {
             if (i > 0) result += delimiter;
@@ -57,7 +57,7 @@ public:
         return result;
     }
     
-    static auto Replace(const std::string& str, const std::string& from, const std::string& to) -> std::string {
+    static std::string Replace(const std::string& str, const std::string& from, const std::string& to) {
         std::string result = str;
         size_t pos = 0;
         while ((pos = result.find(from, pos)) != std::string::npos) {
@@ -67,15 +67,15 @@ public:
         return result;
     }
     
-    static auto StartsWith(const std::string& str, const std::string& prefix) -> bool {
+    static bool StartsWith(const std::string& str, const std::string& prefix) {
         return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
     }
     
-    static auto EndsWith(const std::string& str, const std::string& suffix) -> bool {
+    static bool EndsWith(const std::string& str, const std::string& suffix) {
         return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
     
-    static auto Contains(const std::string& str, const std::string& substr) -> bool {
+    static bool Contains(const std::string& str, const std::string& substr) {
         return str.find(substr) != std::string::npos;
     }
 };
