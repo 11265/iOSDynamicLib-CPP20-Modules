@@ -22,6 +22,7 @@ clang++ $OBJC_FLAGS $COMMON_FLAGS \
     -isysroot $(xcrun --sdk iphoneos --show-sdk-path) \
     -framework UIKit \
     -framework Foundation \
+    -framework CoreGraphics \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/ios/${LIBRARY_NAME}.dylib" \
@@ -38,6 +39,7 @@ clang++ $OBJC_FLAGS $COMMON_FLAGS \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
     -framework UIKit \
     -framework Foundation \
+    -framework CoreGraphics \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_arm64.dylib" \
@@ -54,6 +56,7 @@ clang++ $OBJC_FLAGS $COMMON_FLAGS \
     -isysroot $(xcrun --sdk iphonesimulator --show-sdk-path) \
     -framework UIKit \
     -framework Foundation \
+    -framework CoreGraphics \
     -dynamiclib \
     -install_name @rpath/${LIBRARY_NAME}.framework/${LIBRARY_NAME} \
     -o "$OUTPUT_DIR/simulator/${LIBRARY_NAME}_x64.dylib" \
