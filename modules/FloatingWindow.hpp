@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef __OBJC__
-#import <UIKit/UIKit.h>
-#endif
-
 #include <string>
 #include <functional>
 
