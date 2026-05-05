@@ -13,7 +13,7 @@ rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR/ios"
 mkdir -p "$OUTPUT_DIR/simulator"
 
-COMMON_FLAGS="-std=c++20 -O2 -fvisibility=hidden -fobjc-arc"
+COMMON_FLAGS="-x objective-c++ -std=c++20 -O2 -fvisibility=hidden -fobjc-arc -fmodules"
 
 echo "=== Building for iOS (arm64) ==="
 clang++ $COMMON_FLAGS \
