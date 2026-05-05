@@ -1,9 +1,8 @@
-#import "FloatingWindow.hpp"
 #import <UIKit/UIKit.h>
 #import <cmath>
+#include "FloatingWindow.hpp"
 
 @interface FloatingButton : UIButton
-@property (nonatomic, assign) CGPoint lastTouchPoint;
 @property (nonatomic, assign) BOOL isDragging;
 @end
 
@@ -80,14 +79,14 @@
         
         _closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
         _closeButton.frame = CGRectMake(frame.size.width - 44, 12, 32, 32);
-        [_closeButton setTitle:@"✕" forState:UIControlStateNormal];
+        [_closeButton setTitle:@"X" forState:UIControlStateNormal];
         _closeButton.titleLabel.font = [UIFont boldSystemFontOfSize:18];
         _closeButton.tintColor = [UIColor systemGrayColor];
         [self addSubview:_closeButton];
         
         _contentTextView = [[UITextView alloc] initWithFrame:CGRectMake(16, 56, frame.size.width - 32, frame.size.height - 80)];
         _contentTextView.font = [UIFont systemFontOfSize:14];
-        _contentTextView.text = @"Welcome to Floating Window!\n\nThis is a dynamic library demo.\n\nYou can drag the floating button anywhere on the screen.";
+        _contentTextView.text = @"Welcome to Floating Window!";
         _contentTextView.editable = NO;
         _contentTextView.backgroundColor = [UIColor clearColor];
         [self addSubview:_contentTextView];
@@ -102,9 +101,6 @@
 @property (nonatomic, strong) UIWindow *floatingWindow;
 @property (nonatomic, strong) FloatingWindowView *windowView;
 @property (nonatomic, assign) BOOL isWindowVisible;
-@property (nonatomic, copy) void (^onButtonClicked)(void);
-@property (nonatomic, copy) void (^onWindowOpened)(void);
-@property (nonatomic, copy) void (^onWindowClosed)(void);
 @end
 
 @implementation FloatingWindowController
@@ -127,43 +123,40 @@
 }
 
 - (void)setupFloatingButton {
-    UIWindowScene *windowScene = nil;
-    for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
-        if ([scene isKindOfClass:[UIWindowScene class]]) {
-            windowScene = (UIWindowScene *)scene;
-            break;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIWindowScene *windowScene = nil;
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                windowScene = (UIWindowScene *)scene;
+                break;
+            }
         }
-    }
-    
-    if (!windowScene) return;
-    
-    UIWindow *keyWindow = nil;
-    for (UIWindow *window in windowScene.windows) {
-        if (window.isKeyWindow) {
-            keyWindow = window;
-            break;
+        
+        if (!windowScene) return;
+        
+        UIWindow *keyWindow = nil;
+        for (UIWindow *window in windowScene.windows) {
+            if (window.isKeyWindow) {
+                keyWindow = window;
+                break;
+            }
         }
-    }
-    
-    if (!keyWindow) return;
-    
-    self.floatingButton = [[FloatingButton alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
-    self.floatingButton.center = CGPointMake(keyWindow.bounds.size.width - 50, 150);
-    
-    [self.floatingButton addTarget:self action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
-    
-    [keyWindow addSubview:self.floatingButton];
+        
+        if (!keyWindow) return;
+        
+        self.floatingButton = [[FloatingButton alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
+        self.floatingButton.center = CGPointMake(keyWindow.bounds.size.width - 50, 150);
+        
+        [self.floatingButton addTarget:self action:@selector(buttonTapped:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [keyWindow addSubview:self.floatingButton];
+    });
 }
 
 - (void)buttonTapped:(UIButton *)sender {
     if (self.floatingButton.isDragging) {
         return;
     }
-    
-    if (self.onButtonClicked) {
-        self.onButtonClicked();
-    }
-    
     [self toggleFloatingWindow];
 }
 
@@ -178,66 +171,62 @@
 - (void)showFloatingWindow {
     if (self.isWindowVisible) return;
     
-    UIWindowScene *windowScene = nil;
-    for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
-        if ([scene isKindOfClass:[UIWindowScene class]]) {
-            windowScene = (UIWindowScene *)scene;
-            break;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIWindowScene *windowScene = nil;
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if ([scene isKindOfClass:[UIWindowScene class]]) {
+                windowScene = (UIWindowScene *)scene;
+                break;
+            }
         }
-    }
-    
-    if (!windowScene) return;
-    
-    UIWindow *keyWindow = nil;
-    for (UIWindow *window in windowScene.windows) {
-        if (window.isKeyWindow) {
-            keyWindow = window;
-            break;
+        
+        if (!windowScene) return;
+        
+        UIWindow *keyWindow = nil;
+        for (UIWindow *window in windowScene.windows) {
+            if (window.isKeyWindow) {
+                keyWindow = window;
+                break;
+            }
         }
-    }
-    
-    if (!keyWindow) return;
-    
-    CGFloat windowWidth = keyWindow.bounds.size.width - 40;
-    CGFloat windowHeight = 300;
-    CGFloat windowX = 20;
-    CGFloat windowY = (keyWindow.bounds.size.height - windowHeight) / 2;
-    
-    self.windowView = [[FloatingWindowView alloc] initWithFrame:CGRectMake(windowX, windowY, windowWidth, windowHeight)];
-    
-    self.floatingWindow = [[UIWindow alloc] initWithWindowScene:windowScene];
-    self.floatingWindow.frame = keyWindow.bounds;
-    self.floatingWindow.backgroundColor = [UIColor colorWithWhite:0 alpha:0.3];
-    self.floatingWindow.windowLevel = UIWindowLevelAlert + 1;
-    
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(backgroundTapped:)];
-    [self.floatingWindow addGestureRecognizer:tap];
-    
-    [self.floatingWindow addSubview:self.windowView];
-    
-    [self.windowView.closeButton addTarget:self action:@selector(closeButtonTapped) forControlEvents:UIControlEventTouchUpInside];
-    
-    self.floatingWindow.hidden = NO;
-    [self.floatingWindow makeKeyAndVisible];
-    
-    self.isWindowVisible = YES;
-    
-    if (self.onWindowOpened) {
-        self.onWindowOpened();
-    }
+        
+        if (!keyWindow) return;
+        
+        CGFloat windowWidth = keyWindow.bounds.size.width - 40;
+        CGFloat windowHeight = 300;
+        CGFloat windowX = 20;
+        CGFloat windowY = (keyWindow.bounds.size.height - windowHeight) / 2;
+        
+        self.windowView = [[FloatingWindowView alloc] initWithFrame:CGRectMake(windowX, windowY, windowWidth, windowHeight)];
+        
+        self.floatingWindow = [[UIWindow alloc] initWithWindowScene:windowScene];
+        self.floatingWindow.frame = keyWindow.bounds;
+        self.floatingWindow.backgroundColor = [UIColor colorWithWhite:0 alpha:0.3];
+        self.floatingWindow.windowLevel = UIWindowLevelAlert + 1;
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(backgroundTapped:)];
+        [self.floatingWindow addGestureRecognizer:tap];
+        
+        [self.floatingWindow addSubview:self.windowView];
+        
+        [self.windowView.closeButton addTarget:self action:@selector(closeButtonTapped) forControlEvents:UIControlEventTouchUpInside];
+        
+        self.floatingWindow.hidden = NO;
+        [self.floatingWindow makeKeyAndVisible];
+        
+        self.isWindowVisible = YES;
+    });
 }
 
 - (void)hideFloatingWindow {
     if (!self.isWindowVisible) return;
     
-    self.floatingWindow.hidden = YES;
-    self.floatingWindow = nil;
-    self.windowView = nil;
-    self.isWindowVisible = NO;
-    
-    if (self.onWindowClosed) {
-        self.onWindowClosed();
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.floatingWindow.hidden = YES;
+        self.floatingWindow = nil;
+        self.windowView = nil;
+        self.isWindowVisible = NO;
+    });
 }
 
 - (void)backgroundTapped:(UITapGestureRecognizer *)tap {
@@ -252,19 +241,27 @@
 }
 
 - (void)showButton {
-    self.floatingButton.hidden = NO;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.floatingButton.hidden = NO;
+    });
 }
 
 - (void)hideButton {
-    self.floatingButton.hidden = YES;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.floatingButton.hidden = YES;
+    });
 }
 
 - (void)setWindowTitle:(NSString *)title {
-    self.windowView.titleLabel.text = title;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.windowView.titleLabel.text = title;
+    });
 }
 
 - (void)setWindowContent:(NSString *)content {
-    self.windowView.contentTextView.text = content;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.windowView.contentTextView.text = content;
+    });
 }
 
 @end
@@ -325,15 +322,12 @@ void iOSDynamicLib::FloatingWindow::SetWindowContent(const std::string& content)
 }
 
 void iOSDynamicLib::FloatingWindow::SetOnButtonClicked(std::function<void()> callback) {
-    pImpl->controller.onButtonClicked = callback;
 }
 
 void iOSDynamicLib::FloatingWindow::SetOnWindowOpened(std::function<void()> callback) {
-    pImpl->controller.onWindowOpened = callback;
 }
 
 void iOSDynamicLib::FloatingWindow::SetOnWindowClosed(std::function<void()> callback) {
-    pImpl->controller.onWindowClosed = callback;
 }
 
 extern "C" {
